@@ -1,41 +1,18 @@
 import React, { useState } from 'react';
 import { Plus, Edit, Trash2, Database, Settings, ChevronDown, ChevronRight } from 'lucide-react';
-
-interface Target {
-  id: string;
-  job_name: string;
-  static_configs: Array<{ targets: string[] }>;
-  scrape_interval: string;
-  metrics_path: string;
-  relabel_configs?: Array<{
-    source_labels?: string[];
-    separator?: string;
-    target_label?: string;
-    regex?: string;
-    modulus?: number;
-    replacement?: string;
-    action?: 'replace' | 'keep' | 'drop' | 'hashmod' | 'labelmap' | 'labeldrop' | 'labelkeep';
-  }>;
-  metric_relabel_configs?: Array<{
-    source_labels?: string[];
-    separator?: string;
-    target_label?: string;
-    regex?: string;
-    modulus?: number;
-    replacement?: string;
-    action?: 'replace' | 'keep' | 'drop' | 'hashmod' | 'labelmap' | 'labeldrop' | 'labelkeep';
-  }>;
-}
+import { TargetService } from '../services/targetService';
+import type { Target } from '../lib/supabase';
 
 interface TargetManagementProps {
   targets: Target[];
-  setTargets: (targets: Target[]) => void;
+  onDataChange: () => void;
 }
 
-export const TargetManagement: React.FC<TargetManagementProps> = ({ targets, setTargets }) => {
+export const TargetManagement: React.FC<TargetManagementProps> = ({ targets, onDataChange }) => {
   const [showForm, setShowForm] = useState(false);
   const [editingTarget, setEditingTarget] = useState<Target | null>(null);
   const [showRelabelConfig, setShowRelabelConfig] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [formData, setFormData] = useState({
     job_name: '',
     targets: '',
@@ -61,26 +38,33 @@ export const TargetManagement: React.FC<TargetManagementProps> = ({ targets, set
     }>
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSaving(true);
     
-    const newTarget: Target = {
-      id: editingTarget?.id || Date.now().toString(),
+    const targetData = {
       job_name: formData.job_name,
-      static_configs: [{ targets: formData.targets.split(',').map(t => t.trim()) }],
+      targets: formData.targets.split(',').map(t => t.trim()),
       scrape_interval: formData.scrape_interval,
       metrics_path: formData.metrics_path,
       relabel_configs: formData.relabel_configs.length > 0 ? formData.relabel_configs : undefined,
       metric_relabel_configs: formData.metric_relabel_configs.length > 0 ? formData.metric_relabel_configs : undefined,
     };
 
-    if (editingTarget) {
-      setTargets(targets.map(t => t.id === editingTarget.id ? newTarget : t));
-    } else {
-      setTargets([...targets, newTarget]);
+    try {
+      if (editingTarget) {
+        await TargetService.updateTarget(editingTarget.id, targetData);
+      } else {
+        await TargetService.createTarget(targetData);
+      }
+      onDataChange();
+      resetForm();
+    } catch (error) {
+      console.error('Error saving target:', error);
+      alert('保存失败，请重试');
+    } finally {
+      setSaving(false);
     }
-
-    resetForm();
   };
 
   const resetForm = () => {
@@ -101,7 +85,7 @@ export const TargetManagement: React.FC<TargetManagementProps> = ({ targets, set
     setEditingTarget(target);
     setFormData({
       job_name: target.job_name,
-      targets: target.static_configs[0]?.targets.join(', ') || '',
+      targets: target.targets.join(', '),
       scrape_interval: target.scrape_interval,
       metrics_path: target.metrics_path,
       relabel_configs: target.relabel_configs || [],
@@ -113,8 +97,16 @@ export const TargetManagement: React.FC<TargetManagementProps> = ({ targets, set
     }
   };
 
-  const handleDelete = (id: string) => {
-    setTargets(targets.filter(t => t.id !== id));
+  const handleDelete = async (id: string) => {
+    if (!confirm('确定要删除这个目标吗？')) return;
+    
+    try {
+      await TargetService.deleteTarget(id);
+      onDataChange();
+    } catch (error) {
+      console.error('Error deleting target:', error);
+      alert('删除失败，请重试');
+    }
   };
 
   const addRelabelConfig = (type: 'relabel_configs' | 'metric_relabel_configs') => {
@@ -429,9 +421,10 @@ export const TargetManagement: React.FC<TargetManagementProps> = ({ targets, set
             <div className="flex gap-4">
               <button
                 type="submit"
+                disabled={saving}
                 className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg transition-colors"
               >
-                {editingTarget ? 'Update Target' : 'Add Target'}
+                {saving ? '保存中...' : (editingTarget ? 'Update Target' : 'Add Target')}
               </button>
               <button
                 type="button"
@@ -491,7 +484,7 @@ export const TargetManagement: React.FC<TargetManagementProps> = ({ targets, set
             <div className="space-y-2">
               <div>
                 <p className="text-sm font-medium text-gray-300">Targets:</p>
-                <p className="text-gray-400 text-sm">{target.static_configs[0]?.targets.join(', ')}</p>
+                <p className="text-gray-400 text-sm">{target.targets.join(', ')}</p>
               </div>
               <div>
                 <p className="text-sm font-medium text-gray-300">Metrics Path:</p>

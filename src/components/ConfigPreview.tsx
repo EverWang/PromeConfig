@@ -1,22 +1,6 @@
 import React, { useState } from 'react';
 import { Eye, Download, Copy, CheckCircle, AlertCircle } from 'lucide-react';
-
-interface Target {
-  id: string;
-  job_name: string;
-  static_configs: Array<{ targets: string[] }>;
-  scrape_interval: string;
-  metrics_path: string;
-}
-
-interface AlertRule {
-  id: string;
-  alert: string;
-  expr: string;
-  for: string;
-  labels: Record<string, string>;
-  annotations: Record<string, string>;
-}
+import type { Target, AlertRule } from '../lib/supabase';
 
 interface ConfigPreviewProps {
   targets: Target[];
@@ -94,9 +78,7 @@ scrape_configs:
       }
       
       config += `    static_configs:\n`;
-      target.static_configs.forEach(sc => {
-        config += `      - targets: [${sc.targets.map(t => `'${t}'`).join(', ')}]\n`;
-      });
+      config += `      - targets: [${target.targets.map(t => `'${t}'`).join(', ')}]\n`;
       
       if (target.relabel_configs && target.relabel_configs.length > 0) {
         config += `    relabel_configs:\n`;
@@ -169,9 +151,9 @@ scrape_configs:
 groups:
   - name: default
     rules:
-${alertRules.map(rule => `      - alert: ${rule.alert}
+${alertRules.map(rule => `      - alert: ${rule.alert_name}
         expr: ${rule.expr}
-        for: ${rule.for}
+        for: ${rule.for_duration}
         labels:
 ${Object.entries(rule.labels).map(([key, value]) => `          ${key}: ${value}`).join('\n')}
         annotations:
@@ -212,7 +194,7 @@ ${Object.entries(rule.annotations).map(([key, value]) => `          ${key}: "${v
       }
       targets.forEach(target => {
         if (!target.job_name) errors.push(`Missing job name for target`);
-        if (target.static_configs[0]?.targets.length === 0) {
+        if (target.targets.length === 0) {
           errors.push(`No targets specified for job: ${target.job_name}`);
         }
       });
