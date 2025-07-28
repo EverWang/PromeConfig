@@ -7,13 +7,9 @@ export class AISettingsService {
     const { data, error } = await supabase
       .from('ai_settings')
       .select('*')
-      .single();
+      .maybeSingle();
 
     if (error) {
-      if (error.code === 'PGRST116') {
-        // 没有找到记录，返回null
-        return null;
-      }
       console.error('Error fetching AI settings:', error);
       throw error;
     }
@@ -34,7 +30,7 @@ export class AISettingsService {
       .from('ai_settings')
       .select('id')
       .eq('user_id', user.id)
-      .single();
+      .maybeSingle();
 
     if (existingData) {
       // 更新现有设置
