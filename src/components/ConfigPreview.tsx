@@ -194,7 +194,7 @@ ${Object.entries(rule.annotations).map(([key, value]) => `          ${key}: "${v
       }
       targets.forEach(target => {
         if (!target.job_name) errors.push(`Missing job name for target`);
-        if (target.static_configs[0]?.targets.length === 0) {
+        if (target.targets.length === 0) {
           errors.push(`No targets specified for job: ${target.job_name}`);
         }
       });
