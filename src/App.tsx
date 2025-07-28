@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AlertTriangle, Database, Settings, Zap, RefreshCw, Eye, Download, Upload, Cpu } from 'lucide-react';
 import { AuthWrapper } from './components/AuthWrapper';
 import { Sidebar } from './components/Sidebar';
@@ -7,52 +7,38 @@ import { TargetManagement } from './components/TargetManagement';
 import { AlertRuleManagement } from './components/AlertRuleManagement';
 import { ConfigPreview } from './components/ConfigPreview';
 import { PrometheusAPI } from './components/PrometheusAPI';
+import { TargetService } from './services/targetService';
+import { AlertRuleService } from './services/alertRuleService';
+import type { Target, AlertRule } from './lib/supabase';
 
 type ActiveView = 'dashboard' | 'targets' | 'alerts' | 'preview' | 'api';
 
 function App() {
   const [activeView, setActiveView] = useState<ActiveView>('dashboard');
-  const [targets, setTargets] = useState([
-    {
-      id: '1',
-      job_name: 'node-exporter',
-      static_configs: [{ targets: ['localhost:9100'] }],
-      scrape_interval: '15s',
-      metrics_path: '/metrics',
-    },
-    {
-      id: '2',
-      job_name: 'prometheus',
-      static_configs: [{ targets: ['localhost:9090'] }],
-      scrape_interval: '15s',
-      metrics_path: '/metrics',
-    },
-  ]);
+  const [targets, setTargets] = useState<Target[]>([]);
+  const [alertRules, setAlertRules] = useState<AlertRule[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const [alertRules, setAlertRules] = useState([
-    {
-      id: '1',
-      alert: 'HighCPUUsage',
-      expr: 'cpu_usage_percent > 80',
-      for: '5m',
-      labels: { severity: 'warning' },
-      annotations: {
-        summary: 'High CPU usage detected',
-        description: 'CPU usage is above 80% for more than 5 minutes',
-      },
-    },
-    {
-      id: '2',
-      alert: 'ServiceDown',
-      expr: 'up == 0',
-      for: '1m',
-      labels: { severity: 'critical' },
-      annotations: {
-        summary: 'Service is down',
-        description: 'Service {{ $labels.instance }} is down',
-      },
-    },
-  ]);
+  // 加载数据
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const loadData = async () => {
+    try {
+      setLoading(true);
+      const [targetsData, alertRulesData] = await Promise.all([
+        TargetService.getTargets(),
+        AlertRuleService.getAlertRules()
+      ]);
+      setTargets(targetsData);
+      setAlertRules(alertRulesData);
+    } catch (error) {
+      console.error('Error loading data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: Cpu },
@@ -63,13 +49,21 @@ function App() {
   ];
 
   const renderActiveView = () => {
+    if (loading) {
+      return (
+        <div className="flex items-center justify-center h-full">
+          <div className="text-white">Loading...</div>
+        </div>
+      );
+    }
+
     switch (activeView) {
       case 'dashboard':
         return <Dashboard targets={targets} alertRules={alertRules} />;
       case 'targets':
-        return <TargetManagement targets={targets} setTargets={setTargets} />;
+        return <TargetManagement targets={targets} onDataChange={loadData} />;
       case 'alerts':
-        return <AlertRuleManagement alertRules={alertRules} setAlertRules={setAlertRules} />;
+        return <AlertRuleManagement alertRules={alertRules} onDataChange={loadData} />;
       case 'preview':
         return <ConfigPreview targets={targets} alertRules={alertRules} />;
       case 'api':

@@ -1,22 +1,6 @@
 import React from 'react';
 import { TrendingUp, AlertTriangle, Database, CheckCircle, XCircle, Clock } from 'lucide-react';
-
-interface Target {
-  id: string;
-  job_name: string;
-  static_configs: Array<{ targets: string[] }>;
-  scrape_interval: string;
-  metrics_path: string;
-}
-
-interface AlertRule {
-  id: string;
-  alert: string;
-  expr: string;
-  for: string;
-  labels: Record<string, string>;
-  annotations: Record<string, string>;
-}
+import type { Target, AlertRule } from '../lib/supabase';
 
 interface DashboardProps {
   targets: Target[];
@@ -61,7 +45,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ targets, alertRules }) => 
 
   const recentActivity = [
     { type: 'target', action: 'Added', name: 'node-exporter', time: '5m ago', status: 'success' },
-    { type: 'alert', action: 'Modified', name: 'HighCPUUsage', time: '12m ago', status: 'success' },
+    { type: 'alert', action: 'Modified', name: alertRules[0]?.alert_name || 'HighCPUUsage', time: '12m ago', status: 'success' },
     { type: 'config', action: 'Reloaded', name: 'prometheus.yml', time: '15m ago', status: 'success' },
     { type: 'alert', action: 'Generated', name: 'DiskSpaceWarning', time: '1h ago', status: 'success' },
   ];
