@@ -67,7 +67,7 @@ function App() {
       case 'preview':
         return <ConfigPreview targets={targets} alertRules={alertRules} />;
       case 'api':
-        return <PrometheusAPI />;
+        return <PrometheusAPI targets={targets} alertRules={alertRules} />;
       default:
         return <Dashboard targets={targets} alertRules={alertRules} />;
     }
