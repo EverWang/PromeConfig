@@ -203,8 +203,8 @@ ${Object.entries(rule.annotations).map(([key, value]) => `          ${key}: "${v
         errors.push('No alert rules configured');
       }
       alertRules.forEach(rule => {
-        if (!rule.alert) errors.push('Missing alert name');
-        if (!rule.expr) errors.push(`Missing expression for alert: ${rule.alert}`);
+        if (!rule.alert_name) errors.push('Missing alert name');
+        if (!rule.expr) errors.push(`Missing expression for alert: ${rule.alert_name}`);
       });
     }
 

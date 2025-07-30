@@ -159,7 +159,7 @@ export const PrometheusAPI: React.FC = () => {
 
               <button
                 onClick={reloadConfiguration}
-                disabled={reloadStatus === 'loading' || connectionStatus !== 'connected'}
+                disabled={reloadStatus === 'loading'}
                 className="w-full bg-yellow-600 hover:bg-yellow-700 disabled:bg-gray-600 text-white px-4 py-3 rounded-lg flex items-center justify-center gap-2 transition-colors"
               >
                 {reloadStatus === 'loading' ? (
