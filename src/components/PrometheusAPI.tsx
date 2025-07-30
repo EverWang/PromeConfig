@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { RefreshCw, Server, CheckCircle, XCircle, Settings, AlertCircle, Loader } from 'lucide-react';
+import { RefreshCw, Server, CheckCircle, XCircle, Settings, AlertCircle, Loader, AlertTriangle } from 'lucide-react';
 
 export const PrometheusAPI: React.FC = () => {
   const [prometheusUrl, setPrometheusUrl] = useState('http://localhost:9090');
