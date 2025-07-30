@@ -44,6 +44,8 @@ export const AuthWrapper: React.FC<AuthWrapperProps> = ({ children }) => {
           password,
         });
         if (error) throw error;
+        // Show success message for sign up
+        setError(null);
       } else {
         const { error } = await supabase.auth.signInWithPassword({
           email,
@@ -52,7 +54,18 @@ export const AuthWrapper: React.FC<AuthWrapperProps> = ({ children }) => {
         if (error) throw error;
       }
     } catch (error: any) {
-      setError(error.message);
+      // Provide more user-friendly error messages
+      if (error.message.includes('Invalid login credentials')) {
+        setError('Invalid email or password. Please check your credentials and try again.');
+      } else if (error.message.includes('Email not confirmed')) {
+        setError('Please check your email and click the confirmation link before signing in.');
+      } else if (error.message.includes('Password should be at least')) {
+        setError('Password must be at least 6 characters long.');
+      } else if (error.message.includes('Unable to validate email address')) {
+        setError('Please enter a valid email address.');
+      } else {
+        setError(error.message || 'An error occurred during authentication.');
+      }
     } finally {
       setAuthLoading(false);
     }
