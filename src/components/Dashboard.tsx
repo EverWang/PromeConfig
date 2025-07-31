@@ -1,6 +1,6 @@
 import React from 'react';
 import { TrendingUp, AlertTriangle, Database, CheckCircle, XCircle, Clock } from 'lucide-react';
-import type { Target, AlertRule } from '../lib/supabase';
+import type { Target, AlertRule } from '../types';
 
 interface DashboardProps {
   targets: Target[];

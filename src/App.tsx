@@ -7,9 +7,10 @@ import { TargetManagement } from './components/TargetManagement';
 import { AlertRuleManagement } from './components/AlertRuleManagement';
 import { ConfigPreview } from './components/ConfigPreview';
 import { PrometheusAPI } from './components/PrometheusAPI';
-import { TargetService } from './services/targetService';
-import { AlertRuleService } from './services/alertRuleService';
-import type { Target, AlertRule } from './lib/supabase';
+import { targetService } from './services/targetService';
+import { alertRuleService } from './services/alertRuleService';
+import authService from './services/authService';
+import type { Target, AlertRule } from './types';
 
 type ActiveView = 'dashboard' | 'targets' | 'alerts' | 'preview' | 'api';
 
@@ -18,18 +19,50 @@ function App() {
   const [targets, setTargets] = useState<Target[]>([]);
   const [alertRules, setAlertRules] = useState<AlertRule[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
-  // 加载数据
+  // 监听认证状态变化
   useEffect(() => {
-    loadData();
-  }, []);
+    const checkAuth = (shouldLoadData = false) => {
+      const authenticated = authService.isAuthenticated();
+      const wasAuthenticated = isAuthenticated;
+      setIsAuthenticated(authenticated);
+      
+      // 只有在认证状态发生变化或明确要求加载数据时才重新加载
+      if (authenticated && (shouldLoadData || !wasAuthenticated)) {
+        loadData();
+      } else if (!authenticated && wasAuthenticated) {
+        setLoading(false);
+        setTargets([]);
+        setAlertRules([]);
+      }
+    };
+
+    // 初始检查并加载数据
+    checkAuth(true);
+
+    // 监听存储变化（当用户在其他标签页登录/登出时）
+    const handleStorageChange = () => {
+      checkAuth(true);
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    
+    // 定期检查认证状态，但不重新加载数据
+    const interval = setInterval(() => checkAuth(false), 5000);
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      clearInterval(interval);
+    };
+  }, [isAuthenticated]);
 
   const loadData = async () => {
     try {
       setLoading(true);
       const [targetsData, alertRulesData] = await Promise.all([
-        TargetService.getTargets(),
-        AlertRuleService.getAlertRules()
+        targetService.getTargets(),
+        alertRuleService.getAlertRules()
       ]);
       setTargets(targetsData);
       setAlertRules(alertRulesData);

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Eye, Download, Copy, CheckCircle, AlertCircle } from 'lucide-react';
-import type { Target, AlertRule } from '../lib/supabase';
+import type { Target, AlertRule } from '../types';
 
 interface ConfigPreviewProps {
   targets: Target[];
@@ -28,54 +28,7 @@ scrape_configs:
     targets.forEach(target => {
       config += `  - job_name: '${target.job_name}'\n`;
       config += `    scrape_interval: ${target.scrape_interval}\n`;
-      
-      if (target.scrape_timeout) {
-        config += `    scrape_timeout: ${target.scrape_timeout}\n`;
-      }
-      
       config += `    metrics_path: ${target.metrics_path}\n`;
-      config += `    scheme: ${target.scheme || 'http'}\n`;
-      
-      if (target.honor_labels) {
-        config += `    honor_labels: true\n`;
-      }
-      
-      if (target.honor_timestamps === false) {
-        config += `    honor_timestamps: false\n`;
-      }
-      
-      if (target.params) {
-        config += `    params:\n`;
-        Object.entries(target.params).forEach(([key, values]) => {
-          config += `      ${key}: [${values.map(v => `'${v}'`).join(', ')}]\n`;
-        });
-      }
-      
-      if (target.basic_auth) {
-        config += `    basic_auth:\n`;
-        config += `      username: ${target.basic_auth.username}\n`;
-        config += `      password: ${target.basic_auth.password}\n`;
-      }
-      
-      if (target.bearer_token) {
-        config += `    bearer_token: ${target.bearer_token}\n`;
-      }
-      
-      if (target.tls_config) {
-        config += `    tls_config:\n`;
-        if (target.tls_config.insecure_skip_verify) {
-          config += `      insecure_skip_verify: true\n`;
-        }
-        if (target.tls_config.ca_file) {
-          config += `      ca_file: ${target.tls_config.ca_file}\n`;
-        }
-        if (target.tls_config.cert_file) {
-          config += `      cert_file: ${target.tls_config.cert_file}\n`;
-        }
-        if (target.tls_config.key_file) {
-          config += `      key_file: ${target.tls_config.key_file}\n`;
-        }
-      }
       
       config += `    static_configs:\n`;
       config += `      - targets: [${target.targets.map(t => `'${t}'`).join(', ')}]\n`;

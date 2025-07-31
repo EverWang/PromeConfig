@@ -1,0 +1,300 @@
+version: '3.8'
+
+# 生产环境 Docker Compose 配置
+# 使用方法: docker-compose -f docker-compose.prod.yml up -d
+
+services:
+  # 反向代理和负载均衡
+  nginx:
+    image: nginx:alpine
+    container_name: promeconfig-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./deploy/nginx.prod.conf:/etc/nginx/nginx.conf:ro
+      - ./deploy/ssl:/etc/nginx/ssl:ro
+      - nginx_logs:/var/log/nginx
+    depends_on:
+      - app
+    restart: unless-stopped
+    networks:
+      - promeconfig-network
+    healthcheck:
+      test: ["CMD", "nginx", "-t"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # 应用服务（多实例）
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.prod
+      args:
+        - BUILD_ENV=production
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          cpus: '0.5'
+          memory: 256M
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+    environment:
+      - GIN_MODE=release
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=postgres
+      - DB_PASSWORD_FILE=/run/secrets/db_password
+      - DB_NAME=promeconfig
+      - DB_SSL_MODE=require
+      - JWT_SECRET_FILE=/run/secrets/jwt_secret
+      - REDIS_URL=redis://redis:6379
+      - LOG_LEVEL=info
+      - LOG_FORMAT=json
+    secrets:
+      - db_password
+      - jwt_secret
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - promeconfig-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # PostgreSQL 主数据库
+  postgres:
+    image: postgres:15-alpine
+    container_name: promeconfig-postgres
+    environment:
+      POSTGRES_DB: promeconfig
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD_FILE: /run/secrets/db_password
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
+      PGDATA: /var/lib/postgresql/data/pgdata
+    secrets:
+      - db_password
+    ports:
+      - "127.0.0.1:5432:5432"  # 只绑定到本地
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - postgres_backups:/backups
+      - ./backend/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+      - ./deploy/postgres.conf:/etc/postgresql/postgresql.conf:ro
+    command: |
+      postgres
+      -c config_file=/etc/postgresql/postgresql.conf
+      -c log_statement=all
+      -c log_destination=stderr
+      -c logging_collector=on
+      -c log_directory=/var/log/postgresql
+      -c log_filename=postgresql-%Y-%m-%d.log
+    restart: unless-stopped
+    networks:
+      - promeconfig-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # PostgreSQL 只读副本（可选）
+  postgres-replica:
+    image: postgres:15-alpine
+    container_name: promeconfig-postgres-replica
+    environment:
+      POSTGRES_DB: promeconfig
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD_FILE: /run/secrets/db_password
+      PGUSER: postgres
+    secrets:
+      - db_password
+    ports:
+      - "127.0.0.1:5433:5432"
+    volumes:
+      - postgres_replica_data:/var/lib/postgresql/data
+    command: |
+      bash -c '
+      until pg_basebackup -h postgres -D /var/lib/postgresql/data -U postgres -v -P -W;
+      do
+        echo "Waiting for master to connect..."
+        sleep 1s
+      done
+      echo "standby_mode = on" >> /var/lib/postgresql/data/recovery.conf
+      echo "primary_conninfo = host=postgres port=5432 user=postgres" >> /var/lib/postgresql/data/recovery.conf
+      postgres
+      '
+    depends_on:
+      - postgres
+    restart: unless-stopped
+    networks:
+      - promeconfig-network
+    profiles:
+      - replica  # 使用 --profile replica 启用
+
+  # Redis 缓存和会话存储
+  redis:
+    image: redis:7-alpine
+    container_name: promeconfig-redis
+    ports:
+      - "127.0.0.1:6379:6379"
+    volumes:
+      - redis_data:/data
+      - ./deploy/redis.conf:/usr/local/etc/redis/redis.conf:ro
+    command: redis-server /usr/local/etc/redis/redis.conf
+    restart: unless-stopped
+    networks:
+      - promeconfig-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          cpus: '0.25'
+          memory: 128M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "3"
+
+  # Prometheus 监控
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: promeconfig-prometheus
+    ports:
+      - "127.0.0.1:9090:9090"
+    volumes:
+      - ./deploy/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=30d'
+      - '--web.enable-lifecycle'
+    restart: unless-stopped
+    networks:
+      - promeconfig-network
+    profiles:
+      - monitoring
+
+  # Grafana 可视化
+  grafana:
+    image: grafana/grafana:latest
+    container_name: promeconfig-grafana
+    ports:
+      - "127.0.0.1:3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD_FILE=/run/secrets/grafana_password
+    secrets:
+      - grafana_password
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./deploy/grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./deploy/grafana/datasources:/etc/grafana/provisioning/datasources:ro
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+    networks:
+      - promeconfig-network
+    profiles:
+      - monitoring
+
+  # 日志收集
+  fluentd:
+    image: fluent/fluentd:v1.16-debian-1
+    container_name: promeconfig-fluentd
+    volumes:
+      - ./deploy/fluentd.conf:/fluentd/etc/fluent.conf:ro
+      - nginx_logs:/var/log/nginx:ro
+    ports:
+      - "127.0.0.1:24224:24224"
+    restart: unless-stopped
+    networks:
+      - promeconfig-network
+    profiles:
+      - logging
+
+# 密钥管理
+secrets:
+  db_password:
+    file: ./secrets/db_password.txt
+  jwt_secret:
+    file: ./secrets/jwt_secret.txt
+  grafana_password:
+    file: ./secrets/grafana_password.txt
+
+# 数据卷
+volumes:
+  postgres_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /opt/promeconfig/data/postgres
+  postgres_replica_data:
+    driver: local
+  postgres_backups:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /opt/promeconfig/backups
+  redis_data:
+    driver: local
+  prometheus_data:
+    driver: local
+  grafana_data:
+    driver: local
+  nginx_logs:
+    driver: local
+
+# 网络配置
+networks:
+  promeconfig-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+    driver_opts:
+      com.docker.network.bridge.name: promeconfig-br

@@ -1,74 +1,20 @@
-import { supabase } from '../lib/supabase';
-import type { AlertRule } from '../lib/supabase';
+import apiClient from './apiClient';
+import type { AlertRule, CreateAlertRuleRequest, UpdateAlertRuleRequest } from '../types';
 
-export class AlertRuleService {
-  // 获取用户的所有告警规则
-  static async getAlertRules(): Promise<AlertRule[]> {
-    const { data, error } = await supabase
-      .from('alert_rules')
-      .select('*')
-      .order('created_at', { ascending: false });
+export const alertRuleService = {
+  async getAlertRules(): Promise<AlertRule[]> {
+    return apiClient.get<AlertRule[]>('/alertrules');
+  },
 
-    if (error) {
-      console.error('Error fetching alert rules:', error);
-      throw error;
-    }
+  async createAlertRule(alertRule: CreateAlertRuleRequest): Promise<AlertRule> {
+    return apiClient.post<AlertRule>('/alertrules', alertRule);
+  },
 
-    return data || [];
-  }
+  async updateAlertRule(id: string, updates: UpdateAlertRuleRequest): Promise<AlertRule> {
+    return apiClient.put<AlertRule>(`/alertrules/${id}`, updates);
+  },
 
-  // 创建新的告警规则
-  static async createAlertRule(ruleData: Omit<AlertRule, 'id' | 'user_id' | 'created_at' | 'updated_at'>): Promise<AlertRule> {
-    const { data: { user } } = await supabase.auth.getUser();
-    
-    if (!user) {
-      throw new Error('User not authenticated');
-    }
-
-    const { data, error } = await supabase
-      .from('alert_rules')
-      .insert([{
-        ...ruleData,
-        user_id: user.id
-      }])
-      .select()
-      .single();
-
-    if (error) {
-      console.error('Error creating alert rule:', error);
-      throw error;
-    }
-
-    return data;
-  }
-
-  // 更新告警规则
-  static async updateAlertRule(id: string, ruleData: Partial<Omit<AlertRule, 'id' | 'user_id' | 'created_at' | 'updated_at'>>): Promise<AlertRule> {
-    const { data, error } = await supabase
-      .from('alert_rules')
-      .update(ruleData)
-      .eq('id', id)
-      .select()
-      .single();
-
-    if (error) {
-      console.error('Error updating alert rule:', error);
-      throw error;
-    }
-
-    return data;
-  }
-
-  // 删除告警规则
-  static async deleteAlertRule(id: string): Promise<void> {
-    const { error } = await supabase
-      .from('alert_rules')
-      .delete()
-      .eq('id', id);
-
-    if (error) {
-      console.error('Error deleting alert rule:', error);
-      throw error;
-    }
-  }
-}
+  async deleteAlertRule(id: string): Promise<void> {
+    return apiClient.delete<void>(`/alertrules/${id}`);
+  },
+};

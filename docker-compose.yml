@@ -1,0 +1,74 @@
+version: '3.8'
+
+services:
+  # PostgreSQL数据库
+  postgres:
+    image: postgres:15-alpine
+    container_name: promeconfig-postgres
+    environment:
+      POSTGRES_DB: promeconfig
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres123
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backend/init.sql:/docker-entrypoint-initdb.d/init.sql
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    networks:
+      - promeconfig-network
+
+  # 应用服务（前端+后端）
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: promeconfig-app
+    ports:
+      - "80:80"
+      - "8080:8080"
+    environment:
+      - GIN_MODE=release
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres123
+      - DB_NAME=promeconfig
+      - DB_SSL_MODE=disable
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - promeconfig-network
+    volumes:
+      - ./backend/.env:/app/.env:ro
+
+  # Redis缓存（可选）
+  redis:
+    image: redis:7-alpine
+    container_name: promeconfig-redis
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+    networks:
+      - promeconfig-network
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  promeconfig-network:
+    driver: bridge

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { RefreshCw, Server, CheckCircle, XCircle, Settings, AlertCircle, Loader, AlertTriangle, Upload, Download } from 'lucide-react';
-import type { Target, AlertRule } from '../lib/supabase';
+import type { Target, AlertRule } from '../types';
 
 interface PrometheusAPIProps {
   targets?: Target[];

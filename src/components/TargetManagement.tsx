@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Plus, Edit, Trash2, Database, Settings, ChevronDown, ChevronRight } from 'lucide-react';
-import { TargetService } from '../services/targetService';
-import type { Target } from '../lib/supabase';
+import { targetService } from '../services/targetService';
+import type { Target } from '../types';
 
 interface TargetManagementProps {
   targets: Target[];
@@ -53,9 +53,9 @@ export const TargetManagement: React.FC<TargetManagementProps> = ({ targets, onD
 
     try {
       if (editingTarget) {
-        await TargetService.updateTarget(editingTarget.id, targetData);
+        await targetService.updateTarget(editingTarget.id, targetData);
       } else {
-        await TargetService.createTarget(targetData);
+        await targetService.createTarget(targetData);
       }
       onDataChange();
       resetForm();
@@ -97,11 +97,11 @@ export const TargetManagement: React.FC<TargetManagementProps> = ({ targets, onD
     }
   };
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = async (id: number) => {
     if (!confirm('确定要删除这个目标吗？')) return;
     
     try {
-      await TargetService.deleteTarget(id);
+      await targetService.deleteTarget(id);
       onDataChange();
     } catch (error) {
       console.error('Error deleting target:', error);

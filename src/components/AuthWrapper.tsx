@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { supabase } from '../lib/supabase';
-import { User } from '@supabase/supabase-js';
+import authService, { User } from '../services/authService';
 import { LogIn, UserPlus, Loader } from 'lucide-react';
 
 interface AuthWrapperProps {
@@ -17,19 +16,19 @@ export const AuthWrapper: React.FC<AuthWrapperProps> = ({ children }) => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // 获取当前用户
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      setUser(user);
-      setLoading(false);
-    });
+    // 检查是否已登录
+    const checkAuth = async () => {
+      try {
+        const currentUser = await authService.getCurrentUser();
+        setUser(currentUser);
+      } catch (e) {
+        setUser(null);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-    // 监听认证状态变化
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      setUser(session?.user ?? null);
-      setLoading(false);
-    });
-
-    return () => subscription.unsubscribe();
+    checkAuth();
   }, []);
 
   const handleAuth = async (e: React.FormEvent) => {
@@ -39,29 +38,21 @@ export const AuthWrapper: React.FC<AuthWrapperProps> = ({ children }) => {
 
     try {
       if (isSignUp) {
-        const { error } = await supabase.auth.signUp({
-          email,
-          password,
-        });
-        if (error) throw error;
-        // Show success message for sign up
-        setError(null);
+        const response = await authService.register({ email, password });
+        setUser(response.user);
       } else {
-        const { error } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        });
-        if (error) throw error;
+        const response = await authService.login({ email, password });
+        setUser(response.user);
       }
     } catch (error: any) {
       // Provide more user-friendly error messages
-      if (error.message.includes('Invalid login credentials')) {
+      if (error.message.includes('Invalid login credentials') || error.message.includes('invalid credentials')) {
         setError('Invalid email or password. Please check your credentials and try again.');
-      } else if (error.message.includes('Email not confirmed')) {
-        setError('Please check your email and click the confirmation link before signing in.');
+      } else if (error.message.includes('user already exists')) {
+        setError('An account with this email already exists. Please sign in instead.');
       } else if (error.message.includes('Password should be at least')) {
         setError('Password must be at least 6 characters long.');
-      } else if (error.message.includes('Unable to validate email address')) {
+      } else if (error.message.includes('invalid email')) {
         setError('Please enter a valid email address.');
       } else {
         setError(error.message || 'An error occurred during authentication.');
@@ -72,7 +63,8 @@ export const AuthWrapper: React.FC<AuthWrapperProps> = ({ children }) => {
   };
 
   const handleSignOut = async () => {
-    await supabase.auth.signOut();
+    await authService.logout();
+    setUser(null);
   };
 
   if (loading) {
