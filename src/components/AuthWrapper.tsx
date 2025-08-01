@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { supabase } from '../lib/supabase';
 import { User } from '@supabase/supabase-js';
 import { LogIn, UserPlus, Loader } from 'lucide-react';
+import { AuthService } from '../services/apiService';
 
 interface AuthWrapperProps {
   children: React.ReactNode;
@@ -18,14 +18,14 @@ export const AuthWrapper: React.FC<AuthWrapperProps> = ({ children }) => {
 
   useEffect(() => {
     // 获取当前用户
-    supabase.auth.getUser().then(({ data: { user } }) => {
+    AuthService.getUser().then(({ user }) => {
       setUser(user);
       setLoading(false);
     });
 
     // 监听认证状态变化
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      setUser(session?.user ?? null);
+    const { data: { subscription } } = AuthService.onAuthStateChange((user) => {
+      setUser(user);
       setLoading(false);
     });
 
@@ -39,18 +39,12 @@ export const AuthWrapper: React.FC<AuthWrapperProps> = ({ children }) => {
 
     try {
       if (isSignUp) {
-        const { error } = await supabase.auth.signUp({
-          email,
-          password,
-        });
+        const { error } = await AuthService.signUp(email, password);
         if (error) throw error;
         // Show success message for sign up
         setError(null);
       } else {
-        const { error } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        });
+        const { error } = await AuthService.signIn(email, password);
         if (error) throw error;
       }
     } catch (error: any) {
@@ -72,7 +66,7 @@ export const AuthWrapper: React.FC<AuthWrapperProps> = ({ children }) => {
   };
 
   const handleSignOut = async () => {
-    await supabase.auth.signOut();
+    await AuthService.signOut();
   };
 
   if (loading) {

@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { Plus, Edit, Trash2, AlertTriangle, Zap, Clock, Tag, Settings } from 'lucide-react';
-import { AlertRuleService } from '../services/alertRuleService';
-import { AISettingsService } from '../services/aiSettingsService';
+import { AlertRuleService, AISettingsService } from '../services/apiService';
 import type { AlertRule, AISettings } from '../lib/supabase';
 
 interface AlertRuleManagementProps {

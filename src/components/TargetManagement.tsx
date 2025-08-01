@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Plus, Edit, Trash2, Database, Settings, ChevronDown, ChevronRight } from 'lucide-react';
-import { TargetService } from '../services/targetService';
+import { TargetService } from '../services/apiService';
 import type { Target } from '../lib/supabase';
 
 interface TargetManagementProps {

@@ -7,8 +7,7 @@ import { TargetManagement } from './components/TargetManagement';
 import { AlertRuleManagement } from './components/AlertRuleManagement';
 import { ConfigPreview } from './components/ConfigPreview';
 import { PrometheusAPI } from './components/PrometheusAPI';
-import { TargetService } from './services/targetService';
-import { AlertRuleService } from './services/alertRuleService';
+import { TargetService, AlertRuleService } from './services/apiService';
 import type { Target, AlertRule } from './lib/supabase';
 
 type ActiveView = 'dashboard' | 'targets' | 'alerts' | 'preview' | 'api';
