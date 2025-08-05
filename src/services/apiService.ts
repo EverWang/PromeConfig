@@ -10,6 +10,7 @@ export class AuthService {
       const response = await apiClient.signUp(email, password);
       return { user: response.user, error: null };
     } else {
+      if (!supabase) throw new Error('Supabase not initialized');
       const { data, error } = await supabase.auth.signUp({ email, password });
       return { user: data.user, error };
     }
@@ -20,6 +21,7 @@ export class AuthService {
       const response = await apiClient.signIn(email, password);
       return { user: response.user, error: null };
     } else {
+      if (!supabase) throw new Error('Supabase not initialized');
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       return { user: data.user, error };
     }
@@ -30,6 +32,7 @@ export class AuthService {
       await apiClient.signOut();
       return { error: null };
     } else {
+      if (!supabase) throw new Error('Supabase not initialized');
       const { error } = await supabase.auth.signOut();
       return { error };
     }
@@ -44,6 +47,7 @@ export class AuthService {
         return { user: null, error };
       }
     } else {
+      if (!supabase) throw new Error('Supabase not initialized');
       const { data, error } = await supabase.auth.getUser();
       return { user: data.user, error };
     }
@@ -73,6 +77,17 @@ export class AuthService {
         }
       };
     } else {
+      if (!supabase) {
+        callback(null);
+        return {
+          data: {
+            subscription: {
+              unsubscribe: () => {}
+            }
+          }
+        };
+      }
+      
       return supabase.auth.onAuthStateChange((event, session) => {
         callback(session?.user ?? null);
       });
@@ -86,6 +101,7 @@ export class TargetService {
     if (apiConfig.type === 'golang' && apiClient) {
       return await apiClient.getTargets();
     } else {
+      if (!supabase) throw new Error('Supabase not initialized');
       const { data, error } = await supabase
         .from('targets')
         .select('*')
@@ -100,6 +116,7 @@ export class TargetService {
     if (apiConfig.type === 'golang' && apiClient) {
       return await apiClient.createTarget(targetData);
     } else {
+      if (!supabase) throw new Error('Supabase not initialized');
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('User not authenticated');
 
@@ -118,6 +135,7 @@ export class TargetService {
     if (apiConfig.type === 'golang' && apiClient) {
       return await apiClient.updateTarget(id, targetData);
     } else {
+      if (!supabase) throw new Error('Supabase not initialized');
       const { data, error } = await supabase
         .from('targets')
         .update(targetData)
@@ -134,6 +152,7 @@ export class TargetService {
     if (apiConfig.type === 'golang' && apiClient) {
       await apiClient.deleteTarget(id);
     } else {
+      if (!supabase) throw new Error('Supabase not initialized');
       const { error } = await supabase
         .from('targets')
         .delete()
@@ -150,6 +169,7 @@ export class AlertRuleService {
     if (apiConfig.type === 'golang' && apiClient) {
       return await apiClient.getAlertRules();
     } else {
+      if (!supabase) throw new Error('Supabase not initialized');
       const { data, error } = await supabase
         .from('alert_rules')
         .select('*')
@@ -164,6 +184,7 @@ export class AlertRuleService {
     if (apiConfig.type === 'golang' && apiClient) {
       return await apiClient.createAlertRule(ruleData);
     } else {
+      if (!supabase) throw new Error('Supabase not initialized');
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('User not authenticated');
 
@@ -182,6 +203,7 @@ export class AlertRuleService {
     if (apiConfig.type === 'golang' && apiClient) {
       return await apiClient.updateAlertRule(id, ruleData);
     } else {
+      if (!supabase) throw new Error('Supabase not initialized');
       const { data, error } = await supabase
         .from('alert_rules')
         .update(ruleData)
@@ -198,6 +220,7 @@ export class AlertRuleService {
     if (apiConfig.type === 'golang' && apiClient) {
       await apiClient.deleteAlertRule(id);
     } else {
+      if (!supabase) throw new Error('Supabase not initialized');
       const { error } = await supabase
         .from('alert_rules')
         .delete()
@@ -218,6 +241,7 @@ export class AISettingsService {
         return null;
       }
     } else {
+      if (!supabase) throw new Error('Supabase not initialized');
       const { data, error } = await supabase
         .from('ai_settings')
         .select('*')
@@ -232,6 +256,7 @@ export class AISettingsService {
     if (apiConfig.type === 'golang' && apiClient) {
       return await apiClient.saveAISettings(settings);
     } else {
+      if (!supabase) throw new Error('Supabase not initialized');
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('User not authenticated');
 
@@ -253,6 +278,7 @@ export class AISettingsService {
         if (error) throw error;
         return data;
       } else {
+        if (!supabase) throw new Error('Supabase not initialized');
         const { data, error } = await supabase
           .from('ai_settings')
           .insert([{ ...settings, user_id: user.id }])
@@ -269,6 +295,7 @@ export class AISettingsService {
     if (apiConfig.type === 'golang' && apiClient) {
       await apiClient.deleteAISettings();
     } else {
+      if (!supabase) throw new Error('Supabase not initialized');
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('User not authenticated');
 
