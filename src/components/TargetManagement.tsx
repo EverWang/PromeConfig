@@ -44,11 +44,11 @@ export const TargetManagement: React.FC<TargetManagementProps> = ({ targets, onD
     
     const targetData = {
       job_name: formData.job_name,
-      targets: formData.targets.split(',').map(t => t.trim()),
+      targets: JSON.stringify(formData.targets.split(',').map(t => t.trim())),
       scrape_interval: formData.scrape_interval,
       metrics_path: formData.metrics_path,
-      relabel_configs: formData.relabel_configs.length > 0 ? formData.relabel_configs : undefined,
-      metric_relabel_configs: formData.metric_relabel_configs.length > 0 ? formData.metric_relabel_configs : undefined,
+      relabel_configs: formData.relabel_configs.length > 0 ? JSON.stringify(formData.relabel_configs) : JSON.stringify([]),
+      metric_relabel_configs: formData.metric_relabel_configs.length > 0 ? JSON.stringify(formData.metric_relabel_configs) : JSON.stringify([]),
     };
 
     try {
@@ -83,16 +83,28 @@ export const TargetManagement: React.FC<TargetManagementProps> = ({ targets, onD
 
   const handleEdit = (target: Target) => {
     setEditingTarget(target);
+    
+    // Parse JSON strings back to arrays/objects
+    const parsedTargets = typeof target.targets === 'string' 
+      ? JSON.parse(target.targets) 
+      : target.targets;
+    const parsedRelabelConfigs = typeof target.relabel_configs === 'string' 
+      ? JSON.parse(target.relabel_configs) 
+      : target.relabel_configs || [];
+    const parsedMetricRelabelConfigs = typeof target.metric_relabel_configs === 'string' 
+      ? JSON.parse(target.metric_relabel_configs) 
+      : target.metric_relabel_configs || [];
+    
     setFormData({
       job_name: target.job_name,
-      targets: target.targets.join(', '),
+      targets: Array.isArray(parsedTargets) ? parsedTargets.join(', ') : parsedTargets,
       scrape_interval: target.scrape_interval,
       metrics_path: target.metrics_path,
-      relabel_configs: target.relabel_configs || [],
-      metric_relabel_configs: target.metric_relabel_configs || []
+      relabel_configs: parsedRelabelConfigs,
+      metric_relabel_configs: parsedMetricRelabelConfigs
     });
     setShowForm(true);
-    if (target.relabel_configs?.length || target.metric_relabel_configs?.length) {
+    if (parsedRelabelConfigs?.length || parsedMetricRelabelConfigs?.length) {
       setShowRelabelConfig(true);
     }
   };
@@ -439,78 +451,91 @@ export const TargetManagement: React.FC<TargetManagementProps> = ({ targets, onD
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {targets.map((target) => (
-          <div key={target.id} className="bg-gray-800 rounded-xl p-6 border border-gray-700 hover:border-gray-600 transition-colors">
-            <div className="flex items-start justify-between mb-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-blue-500/20 rounded-lg">
-                  <Database className="w-5 h-5 text-blue-400" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-semibold text-white">{target.job_name}</h3>
-                  <div className="flex items-center gap-2 mt-1">
-                    <span className="px-2 py-1 bg-gray-700 text-gray-300 text-xs rounded">
-                      {target.scrape_interval}
-                    </span>
-                    {target.relabel_configs && target.relabel_configs.length > 0 && (
-                      <span className="px-2 py-1 bg-purple-600 text-white text-xs rounded">
-                        {target.relabel_configs.length} Relabel Rules
+        {targets?.map((target) => {
+          // Parse JSON strings for display
+          const parsedTargets = typeof target.targets === 'string' 
+            ? JSON.parse(target.targets) 
+            : target.targets;
+          const parsedRelabelConfigs = typeof target.relabel_configs === 'string' 
+            ? JSON.parse(target.relabel_configs) 
+            : target.relabel_configs || [];
+          const parsedMetricRelabelConfigs = typeof target.metric_relabel_configs === 'string' 
+            ? JSON.parse(target.metric_relabel_configs) 
+            : target.metric_relabel_configs || [];
+          
+          return (
+            <div key={target.id} className="bg-gray-800 rounded-xl p-6 border border-gray-700 hover:border-gray-600 transition-colors">
+              <div className="flex items-start justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-blue-500/20 rounded-lg">
+                    <Database className="w-5 h-5 text-blue-400" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-white">{target.job_name}</h3>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="px-2 py-1 bg-gray-700 text-gray-300 text-xs rounded">
+                        {target.scrape_interval}
                       </span>
-                    )}
-                    {target.metric_relabel_configs && target.metric_relabel_configs.length > 0 && (
-                      <span className="px-2 py-1 bg-green-600 text-white text-xs rounded">
-                        {target.metric_relabel_configs.length} Metric Rules
-                      </span>
-                    )}
+                      {parsedRelabelConfigs && parsedRelabelConfigs.length > 0 && (
+                        <span className="px-2 py-1 bg-purple-600 text-white text-xs rounded">
+                          {parsedRelabelConfigs.length} Relabel Rules
+                        </span>
+                      )}
+                      {parsedMetricRelabelConfigs && parsedMetricRelabelConfigs.length > 0 && (
+                        <span className="px-2 py-1 bg-green-600 text-white text-xs rounded">
+                          {parsedMetricRelabelConfigs.length} Metric Rules
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => handleEdit(target)}
+                    className="p-2 text-gray-400 hover:text-blue-400 hover:bg-blue-500/10 rounded-lg transition-colors"
+                  >
+                    <Edit className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => handleDelete(target.id)}
+                    className="p-2 text-gray-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => handleEdit(target)}
-                  className="p-2 text-gray-400 hover:text-blue-400 hover:bg-blue-500/10 rounded-lg transition-colors"
-                >
-                  <Edit className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={() => handleDelete(target.id)}
-                  className="p-2 text-gray-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
 
-            <div className="space-y-2">
-              <div>
-                <p className="text-sm font-medium text-gray-300">Targets:</p>
-                <p className="text-gray-400 text-sm">{target.targets.join(', ')}</p>
-              </div>
-              <div>
-                <p className="text-sm font-medium text-gray-300">Metrics Path:</p>
-                <p className="text-gray-400 text-sm">{target.metrics_path}</p>
-              </div>
-              {target.relabel_configs && target.relabel_configs.length > 0 && (
+              <div className="space-y-2">
                 <div>
-                  <p className="text-sm font-medium text-gray-300">Relabel Rules:</p>
-                  <div className="text-gray-400 text-sm">
-                    {target.relabel_configs.map((rule, index) => (
-                      <div key={index} className="bg-gray-700 rounded p-2 mt-1">
-                        <span className="text-purple-400">{rule.action}</span>
-                        {rule.source_labels && rule.source_labels.length > 0 && (
-                          <span className="ml-2">from: {rule.source_labels.join(', ')}</span>
-                        )}
-                        {rule.target_label && (
-                          <span className="ml-2">to: {rule.target_label}</span>
-                        )}
-                      </div>
-                    ))}
-                  </div>
+                  <p className="text-sm font-medium text-gray-300">Targets:</p>
+                  <p className="text-gray-400 text-sm">{Array.isArray(parsedTargets) ? parsedTargets.join(', ') : parsedTargets}</p>
                 </div>
-              )}
+                <div>
+                  <p className="text-sm font-medium text-gray-300">Metrics Path:</p>
+                  <p className="text-gray-400 text-sm">{target.metrics_path}</p>
+                </div>
+                {parsedRelabelConfigs && parsedRelabelConfigs.length > 0 && (
+                  <div>
+                    <p className="text-sm font-medium text-gray-300">Relabel Rules:</p>
+                    <div className="text-gray-400 text-sm">
+                      {parsedRelabelConfigs.map((rule, index) => (
+                        <div key={index} className="bg-gray-700 rounded p-2 mt-1">
+                          <span className="text-purple-400">{rule.action}</span>
+                          {rule.source_labels && rule.source_labels.length > 0 && (
+                            <span className="ml-2">from: {rule.source_labels.join(', ')}</span>
+                          )}
+                          {rule.target_label && (
+                            <span className="ml-2">to: {rule.target_label}</span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

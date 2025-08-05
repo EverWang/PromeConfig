@@ -235,6 +235,14 @@ func (h *Handlers) CreateTarget(c *gin.Context) {
 		req.MetricsPath = "/metrics"
 	}
 
+	// 处理空的JSON字段
+	if len(req.RelabelConfigs) == 0 {
+		req.RelabelConfigs = nil
+	}
+	if len(req.MetricRelabelConfigs) == 0 {
+		req.MetricRelabelConfigs = nil
+	}
+
 	var target models.Target
 	err := h.db.QueryRow(`
 		INSERT INTO targets (user_id, job_name, targets, scrape_interval, metrics_path, relabel_configs, metric_relabel_configs)
@@ -245,7 +253,9 @@ func (h *Handlers) CreateTarget(c *gin.Context) {
 		&target.MetricsPath, &target.RelabelConfigs, &target.MetricRelabelConfigs, &target.CreatedAt, &target.UpdatedAt)
 
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create target"})
+		// 记录详细错误信息
+		println("Database error creating target:", err.Error())
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create target: " + err.Error()})
 		return
 	}
 
@@ -272,6 +282,14 @@ func (h *Handlers) UpdateTarget(c *gin.Context) {
 		return
 	}
 
+	// 处理空的JSON字段
+	if len(req.RelabelConfigs) == 0 {
+		req.RelabelConfigs = nil
+	}
+	if len(req.MetricRelabelConfigs) == 0 {
+		req.MetricRelabelConfigs = nil
+	}
+
 	var target models.Target
 	err = h.db.QueryRow(`
 		UPDATE targets 
@@ -289,7 +307,9 @@ func (h *Handlers) UpdateTarget(c *gin.Context) {
 	}
 
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update target"})
+		// 记录详细错误信息
+		println("Database error updating target:", err.Error())
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update target: " + err.Error()})
 		return
 	}
 
@@ -394,7 +414,9 @@ func (h *Handlers) CreateAlertRule(c *gin.Context) {
 		&rule.Labels, &rule.Annotations, &rule.CreatedAt, &rule.UpdatedAt)
 
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create alert rule"})
+		// 记录详细错误信息
+		println("Database error creating alert rule:", err.Error())
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create alert rule: " + err.Error()})
 		return
 	}
 
@@ -437,7 +459,9 @@ func (h *Handlers) UpdateAlertRule(c *gin.Context) {
 	}
 
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update alert rule"})
+		// 记录详细错误信息
+		println("Database error updating alert rule:", err.Error())
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update alert rule: " + err.Error()})
 		return
 	}
 

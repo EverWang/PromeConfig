@@ -7,7 +7,7 @@ import { TargetManagement } from './components/TargetManagement';
 import { AlertRuleManagement } from './components/AlertRuleManagement';
 import { ConfigPreview } from './components/ConfigPreview';
 import { PrometheusAPI } from './components/PrometheusAPI';
-import { TargetService, AlertRuleService } from './services/apiService';
+import { TargetService, AlertRuleService, AuthService } from './services/apiService';
 import type { Target, AlertRule } from './lib/supabase';
 
 type ActiveView = 'dashboard' | 'targets' | 'alerts' | 'preview' | 'api';
@@ -17,10 +17,28 @@ function App() {
   const [targets, setTargets] = useState<Target[]>([]);
   const [alertRules, setAlertRules] = useState<AlertRule[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
-  // 加载数据
+  // 检查认证状态并加载数据
   useEffect(() => {
-    loadData();
+    const checkAuthAndLoadData = async () => {
+      try {
+        const { user } = await AuthService.getUser();
+        if (user) {
+          setIsAuthenticated(true);
+          await loadData();
+        } else {
+          setIsAuthenticated(false);
+          setLoading(false);
+        }
+      } catch (error) {
+        console.error('Auth check failed:', error);
+        setIsAuthenticated(false);
+        setLoading(false);
+      }
+    };
+
+    checkAuthAndLoadData();
   }, []);
 
   const loadData = async () => {

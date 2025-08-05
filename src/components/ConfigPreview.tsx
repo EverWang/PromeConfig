@@ -25,7 +25,7 @@ rule_files:
 scrape_configs:
 `;
 
-    targets.forEach(target => {
+    targets?.forEach(target => {
       config += `  - job_name: '${target.job_name}'\n`;
       config += `    scrape_interval: ${target.scrape_interval}\n`;
       
@@ -78,11 +78,21 @@ scrape_configs:
       }
       
       config += `    static_configs:\n`;
-      config += `      - targets: [${target.targets.map(t => `'${t}'`).join(', ')}]\n`;
       
-      if (target.relabel_configs && target.relabel_configs.length > 0) {
+      // Parse targets field if it's a JSON string
+      const targetsArray = typeof target.targets === 'string' 
+        ? JSON.parse(target.targets) 
+        : target.targets || [];
+      config += `      - targets: [${targetsArray.map(t => `'${t}'`).join(', ')}]\n`;
+      
+      // Parse relabel_configs field if it's a JSON string
+      const relabelConfigsArray = typeof target.relabel_configs === 'string' 
+        ? JSON.parse(target.relabel_configs) 
+        : target.relabel_configs || [];
+      
+      if (relabelConfigsArray && relabelConfigsArray.length > 0) {
         config += `    relabel_configs:\n`;
-        target.relabel_configs.forEach(relabel => {
+        relabelConfigsArray.forEach(relabel => {
           config += `      - `;
           if (relabel.source_labels) {
             config += `source_labels: [${relabel.source_labels.map(l => `'${l}'`).join(', ')}]\n        `;
@@ -109,9 +119,14 @@ scrape_configs:
         });
       }
       
-      if (target.metric_relabel_configs && target.metric_relabel_configs.length > 0) {
+      // Parse metric_relabel_configs field if it's a JSON string
+      const metricRelabelConfigsArray = typeof target.metric_relabel_configs === 'string' 
+        ? JSON.parse(target.metric_relabel_configs) 
+        : target.metric_relabel_configs || [];
+      
+      if (metricRelabelConfigsArray && metricRelabelConfigsArray.length > 0) {
         config += `    metric_relabel_configs:\n`;
-        target.metric_relabel_configs.forEach(relabel => {
+        metricRelabelConfigsArray.forEach(relabel => {
           config += `      - `;
           if (relabel.source_labels) {
             config += `source_labels: [${relabel.source_labels.map(l => `'${l}'`).join(', ')}]\n        `;
@@ -151,7 +166,7 @@ scrape_configs:
 groups:
   - name: default
     rules:
-${alertRules.map(rule => `      - alert: ${rule.alert_name}
+${alertRules?.map(rule => `      - alert: ${rule.alert_name}
         expr: ${rule.expr}
         for: ${rule.for_duration}
         labels:
@@ -189,20 +204,24 @@ ${Object.entries(rule.annotations).map(([key, value]) => `          ${key}: "${v
     const errors = [];
     
     if (activeTab === 'prometheus') {
-      if (targets.length === 0) {
+      if ((targets?.length || 0) === 0) {
         errors.push('No scrape targets configured');
       }
-      targets.forEach(target => {
+      targets?.forEach(target => {
         if (!target.job_name) errors.push(`Missing job name for target`);
-        if (target.targets.length === 0) {
+        // Parse targets field if it's a JSON string for validation
+        const targetsArray = typeof target.targets === 'string' 
+          ? JSON.parse(target.targets) 
+          : target.targets || [];
+        if ((targetsArray?.length || 0) === 0) {
           errors.push(`No targets specified for job: ${target.job_name}`);
         }
       });
     } else {
-      if (alertRules.length === 0) {
+      if ((alertRules?.length || 0) === 0) {
         errors.push('No alert rules configured');
       }
-      alertRules.forEach(rule => {
+      alertRules?.forEach(rule => {
         if (!rule.alert_name) errors.push('Missing alert name');
         if (!rule.expr) errors.push(`Missing expression for alert: ${rule.alert_name}`);
       });
@@ -212,7 +231,7 @@ ${Object.entries(rule.annotations).map(([key, value]) => `          ${key}: "${v
   };
 
   const errors = validateConfig();
-  const isValid = errors.length === 0;
+  const isValid = (errors?.length || 0) === 0;
 
   return (
     <div className="p-8">
@@ -277,7 +296,7 @@ ${Object.entries(rule.annotations).map(([key, value]) => `          ${key}: "${v
             ) : (
               <>
                 <AlertCircle className="w-5 h-5 text-red-400" />
-                <span className="text-red-400 font-medium">{errors.length} validation errors</span>
+                <span className="text-red-400 font-medium">{errors?.length || 0} validation errors</span>
               </>
             )}
           </div>
@@ -311,7 +330,7 @@ ${Object.entries(rule.annotations).map(([key, value]) => `          ${key}: "${v
             </div>
             <div>
               <h3 className="text-lg font-semibold text-white">Scrape Targets</h3>
-              <p className="text-2xl font-bold text-blue-400">{targets.length}</p>
+              <p className="text-2xl font-bold text-blue-400">{targets?.length || 0}</p>
             </div>
           </div>
         </div>
@@ -323,7 +342,7 @@ ${Object.entries(rule.annotations).map(([key, value]) => `          ${key}: "${v
             </div>
             <div>
               <h3 className="text-lg font-semibold text-white">Alert Rules</h3>
-              <p className="text-2xl font-bold text-yellow-400">{alertRules.length}</p>
+              <p className="text-2xl font-bold text-yellow-400">{alertRules?.length || 0}</p>
             </div>
           </div>
         </div>

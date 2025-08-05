@@ -43,9 +43,9 @@ export const PrometheusAPI: React.FC<PrometheusAPIProps> = ({ targets = [], aler
         setConfigStatus({
           version: '2.45.0',
           uptime: '2h 15m',
-          targets_active: targets.length,
-          targets_total: targets.length,
-          rules_loaded: alertRules.length,
+          targets_active: targets?.length || 0,
+          targets_total: targets?.length || 0,
+          rules_loaded: alertRules?.length || 0,
           last_config_time: new Date().toISOString(),
         });
       } else {
@@ -72,16 +72,26 @@ rule_files:
 scrape_configs:
 `;
 
-    targets.forEach(target => {
+    targets?.forEach(target => {
       config += `  - job_name: '${target.job_name}'\n`;
       config += `    scrape_interval: ${target.scrape_interval}\n`;
       config += `    metrics_path: ${target.metrics_path}\n`;
       config += `    static_configs:\n`;
-      config += `      - targets: [${target.targets.map(t => `'${t}'`).join(', ')}]\n`;
       
-      if (target.relabel_configs && target.relabel_configs.length > 0) {
+      // Parse targets field if it's a JSON string
+      const targetsArray = typeof target.targets === 'string' 
+        ? JSON.parse(target.targets) 
+        : target.targets || [];
+      config += `      - targets: [${targetsArray.map(t => `'${t}'`).join(', ')}]\n`;
+      
+      // Parse relabel_configs field if it's a JSON string
+      const relabelConfigsArray = typeof target.relabel_configs === 'string' 
+        ? JSON.parse(target.relabel_configs) 
+        : target.relabel_configs || [];
+      
+      if (relabelConfigsArray && relabelConfigsArray.length > 0) {
         config += `    relabel_configs:\n`;
-        target.relabel_configs.forEach(relabel => {
+        relabelConfigsArray.forEach(relabel => {
           config += `      - `;
           if (relabel.source_labels) {
             config += `source_labels: [${relabel.source_labels.map(l => `'${l}'`).join(', ')}]\n        `;
@@ -116,7 +126,7 @@ scrape_configs:
 groups:
   - name: default
     rules:
-${alertRules.map(rule => `      - alert: ${rule.alert_name}
+${alertRules?.map(rule => `      - alert: ${rule.alert_name}
         expr: ${rule.expr}
         for: ${rule.for_duration}
         labels:
@@ -188,9 +198,9 @@ ${Object.entries(rule.annotations).map(([key, value]) => `          ${key}: "${v
         setConfigStatus({
           ...configStatus,
           last_config_time: new Date().toISOString(),
-          targets_active: targets.length,
-          targets_total: targets.length,
-          rules_loaded: alertRules.length,
+          targets_active: targets?.length || 0,
+          targets_total: targets?.length || 0,
+          rules_loaded: alertRules?.length || 0,
         });
       } else {
         throw new Error(`重载失败: ${response.status} ${response.statusText}`);
@@ -426,7 +436,7 @@ ${Object.entries(rule.annotations).map(([key, value]) => `          ${key}: "${v
               </div>
               <div>
                 <p className="text-gray-400 text-sm">监控目标</p>
-                <p className="text-white font-semibold">{targets.length}</p>
+                <p className="text-white font-semibold">{targets?.length || 0}</p>
               </div>
             </div>
           </div>
@@ -438,7 +448,7 @@ ${Object.entries(rule.annotations).map(([key, value]) => `          ${key}: "${v
               </div>
               <div>
                 <p className="text-gray-400 text-sm">告警规则</p>
-                <p className="text-white font-semibold">{alertRules.length}</p>
+                <p className="text-white font-semibold">{alertRules?.length || 0}</p>
               </div>
             </div>
           </div>

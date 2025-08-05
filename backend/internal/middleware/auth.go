@@ -1,14 +1,14 @@
 package middleware
 
 import (
-	"database/sql"
 	"net/http"
 	"strings"
+
+	"promeconfig-backend/internal/config"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
-	"promeconfig-backend/internal/config"
 )
 
 func AuthMiddleware() gin.HandlerFunc {
@@ -69,7 +69,7 @@ func GetUserID(c *gin.Context) (uuid.UUID, bool) {
 	if !exists {
 		return uuid.Nil, false
 	}
-	
+
 	id, ok := userID.(uuid.UUID)
 	return id, ok
 }

@@ -56,11 +56,11 @@ export const AlertRuleManagement: React.FC<AlertRuleManagementProps> = ({ alertR
       alert_name: formData.alert,
       expr: formData.expr,
       for_duration: formData.for,
-      labels: { severity: formData.severity },
-      annotations: {
+      labels: JSON.stringify({ severity: formData.severity }),
+      annotations: JSON.stringify({
         summary: formData.summary,
         description: formData.description,
-      },
+      }),
     };
 
     try {
@@ -517,7 +517,7 @@ export const AlertRuleManagement: React.FC<AlertRuleManagementProps> = ({ alertR
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {alertRules.map((rule) => (
+        {alertRules?.map((rule) => (
           <div key={rule.id} className="bg-gray-800 rounded-xl p-6 border border-gray-700 hover:border-gray-600 transition-colors">
             <div className="flex items-start justify-between mb-4">
               <div className="flex items-center gap-3">

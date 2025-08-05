@@ -11,7 +11,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ targets, alertRules }) => 
   const stats = [
     {
       label: 'Active Targets',
-      value: targets.length,
+      value: targets?.length || 0,
       change: '+2',
       trend: 'up',
       icon: Database,
@@ -19,7 +19,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ targets, alertRules }) => 
     },
     {
       label: 'Alert Rules',
-      value: alertRules.length,
+      value: alertRules?.length || 0,
       change: '+1',
       trend: 'up',
       icon: AlertTriangle,
@@ -45,7 +45,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ targets, alertRules }) => 
 
   const recentActivity = [
     { type: 'target', action: 'Added', name: 'node-exporter', time: '5m ago', status: 'success' },
-    { type: 'alert', action: 'Modified', name: alertRules[0]?.alert_name || 'HighCPUUsage', time: '12m ago', status: 'success' },
+    { type: 'alert', action: 'Modified', name: alertRules?.[0]?.alert_name || 'HighCPUUsage', time: '12m ago', status: 'success' },
     { type: 'config', action: 'Reloaded', name: 'prometheus.yml', time: '15m ago', status: 'success' },
     { type: 'alert', action: 'Generated', name: 'DiskSpaceWarning', time: '1h ago', status: 'success' },
   ];
@@ -98,7 +98,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ targets, alertRules }) => 
                 <Database className="w-5 h-5 text-blue-400" />
                 <div>
                   <p className="text-white font-medium">Scrape Targets</p>
-                  <p className="text-gray-400 text-sm">{targets.length} configured jobs</p>
+                  <p className="text-gray-400 text-sm">{targets?.length || 0} configured jobs</p>
                 </div>
               </div>
               <CheckCircle className="w-5 h-5 text-green-400" />
@@ -109,7 +109,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ targets, alertRules }) => 
                 <AlertTriangle className="w-5 h-5 text-yellow-400" />
                 <div>
                   <p className="text-white font-medium">Alert Rules</p>
-                  <p className="text-gray-400 text-sm">{alertRules.length} active rules</p>
+                  <p className="text-gray-400 text-sm">{alertRules?.length || 0} active rules</p>
                 </div>
               </div>
               <CheckCircle className="w-5 h-5 text-green-400" />
