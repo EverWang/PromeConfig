@@ -1,13 +1,18 @@
 import { createClient } from '@supabase/supabase-js';
 
+const apiType = import.meta.env.VITE_API_TYPE || 'supabase';
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-if (!supabaseUrl || !supabaseAnonKey) {
+// Only require Supabase environment variables when using Supabase backend
+if (apiType === 'supabase' && (!supabaseUrl || !supabaseAnonKey)) {
   throw new Error('Missing Supabase environment variables');
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+// Create Supabase client only when using Supabase backend
+export const supabase = apiType === 'supabase' && supabaseUrl && supabaseAnonKey 
+  ? createClient(supabaseUrl, supabaseAnonKey)
+  : null;
 
 // 数据库类型定义
 export interface Target {
