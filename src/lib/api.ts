@@ -49,6 +49,8 @@ export class ApiClient {
   ): Promise<T> {
     const url = `${this.baseUrl}${endpoint}`;
     
+    console.log(`Making request to: ${url}`);
+    
     const headers: HeadersInit = {
       'Content-Type': 'application/json',
       ...options.headers,
@@ -58,13 +60,21 @@ export class ApiClient {
       headers.Authorization = `Bearer ${this.token}`;
     }
 
-    const response = await fetch(url, {
-      ...options,
-      headers,
-    });
+    let response: Response;
+    
+    try {
+      response = await fetch(url, {
+        ...options,
+        headers,
+      });
+    } catch (error) {
+      console.error(`Network error when fetching ${url}:`, error);
+      throw new Error(`Network error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
+      console.error(`HTTP error ${response.status} for ${url}:`, errorData);
       throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
     }
 

@@ -26,14 +26,18 @@ function App() {
   const loadData = async () => {
     try {
       setLoading(true);
+      console.log('Loading data from API...');
       const [targetsData, alertRulesData] = await Promise.all([
         TargetService.getTargets(),
         AlertRuleService.getAlertRules()
       ]);
+      console.log('Data loaded successfully:', { targetsData, alertRulesData });
       setTargets(targetsData);
       setAlertRules(alertRulesData);
     } catch (error) {
       console.error('Error loading data:', error);
+      // Show error to user
+      alert(`Error loading data: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setLoading(false);
     }
