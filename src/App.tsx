@@ -26,18 +26,22 @@ function App() {
   const loadData = async () => {
     try {
       setLoading(true);
-      console.log('Loading data from API...');
+      console.log('Loading data from Supabase...');
       const [targetsData, alertRulesData] = await Promise.all([
         TargetService.getTargets(),
         AlertRuleService.getAlertRules()
       ]);
-      console.log('Data loaded successfully:', { targetsData, alertRulesData });
+      console.log('Data loaded successfully from Supabase:', { targetsData, alertRulesData });
       setTargets(targetsData);
       setAlertRules(alertRulesData);
     } catch (error) {
       console.error('Error loading data:', error);
       // Show error to user
-      alert(`Error loading data: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      if (error instanceof Error && error.message.includes('Missing Supabase environment variables')) {
+        alert('请先配置Supabase环境变量。点击右上角的"Connect to Supabase"按钮进行配置。');
+      } else {
+        alert(`Error loading data: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      }
     } finally {
       setLoading(false);
     }
