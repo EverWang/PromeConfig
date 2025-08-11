@@ -4,13 +4,27 @@ const apiType = import.meta.env.VITE_API_TYPE || 'supabase';
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-// Only require Supabase environment variables when using Supabase backend
-if (apiType === 'supabase' && (!supabaseUrl || !supabaseAnonKey)) {
-  throw new Error('Missing Supabase environment variables');
+// Validate Supabase URL format
+const isValidUrl = (url: string) => {
+  try {
+    new URL(url);
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+// Only require and validate Supabase environment variables when using Supabase backend
+if (apiType === 'supabase') {
+  if (!supabaseUrl || !supabaseAnonKey) {
+    console.warn('Missing Supabase environment variables');
+  } else if (!isValidUrl(supabaseUrl)) {
+    console.warn('Invalid Supabase URL format:', supabaseUrl);
+  }
 }
 
 // Create Supabase client only when using Supabase backend
-export const supabase = apiType === 'supabase' && supabaseUrl && supabaseAnonKey 
+export const supabase = apiType === 'supabase' && supabaseUrl && supabaseAnonKey && isValidUrl(supabaseUrl)
   ? createClient(supabaseUrl, supabaseAnonKey)
   : null;
 
